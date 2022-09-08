@@ -7,15 +7,13 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
-	pgxv4 "github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"go.uber.org/zap"
 
 	"github.com/M-Fisher/companies_api/app/config"
 )
 
 type DB struct {
-	pool    *pgxpool.Pool
+	pool    DBConn
 	Queries Queriable
 	Log     *zap.Logger
 }
@@ -26,6 +24,11 @@ type txConn interface {
 	QueryRow(ctx context.Context, query string, args ...interface{}) pgx.Row
 }
 
+type DBConn interface {
+	txConn
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
+	Close(ctx context.Context) error
+}
 type Queries struct {
 	builder *sq.StatementBuilderType
 	tx      txConn
@@ -57,13 +60,27 @@ func NewPostgres(conf *config.DB, log *zap.Logger) (*DB, error) {
 	return storage, nil
 }
 
-func (d *DB) Close() {
+func (d *DB) Close(ctx context.Context) error {
 	d.Log.Info("Closing DB connection")
-	d.pool.Close()
+	return d.pool.Close(ctx)
+}
+
+func NewTestPostgres(pool DBConn, conf *config.DB, log *zap.Logger) (*DB, error) {
+	storage := &DB{
+		Log: log,
+	}
+	builder := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+	storage.Queries = &Queries{
+		builder: &builder,
+		tx:      pool,
+	}
+	storage.pool = pool
+
+	return storage, nil
 }
 
 func (db *DB) ExecTx(ctx context.Context, f func(q *Queries) error) (err error) {
-	tx, err := db.pool.BeginTx(ctx, pgxv4.TxOptions{IsoLevel: pgxv4.ReadCommitted})
+	tx, err := db.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		return err
 	}
@@ -90,16 +107,13 @@ func (db *DB) ExecTx(ctx context.Context, f func(q *Queries) error) (err error) 
 }
 
 // checkDB Check the DB connection via a given DSN string.
-func checkDB(dsn string, conf *config.DB) (*pgxpool.Pool, error) {
-	dbConfig, err := pgxpool.ParseConfig(dsn)
+func checkDB(dsn string, conf *config.DB) (*pgx.Conn, error) {
+	conn, err := pgx.Connect(context.Background(), dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	dbConfig.MaxConns = int32(conf.MaxConns)
-	dbConfig.MaxConnLifetime = conf.ConnMaxLifetime
-	dbConfig.MaxConnIdleTime = conf.ConnMaxLifetime
-	return pgxpool.ConnectConfig(context.Background(), dbConfig)
+	return conn, nil
 }
 
 func formDbURI(conf *config.DB) string {

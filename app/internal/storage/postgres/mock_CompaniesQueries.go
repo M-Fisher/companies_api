@@ -14,16 +14,14 @@ type MockCompaniesQueries struct {
 }
 
 // CreateCompany provides a mock function with given fields: ctx, params
-func (_m *MockCompaniesQueries) CreateCompany(ctx context.Context, params Company) (*uint64, error) {
+func (_m *MockCompaniesQueries) CreateCompany(ctx context.Context, params Company) (uint64, error) {
 	ret := _m.Called(ctx, params)
 
-	var r0 *uint64
-	if rf, ok := ret.Get(0).(func(context.Context, Company) *uint64); ok {
+	var r0 uint64
+	if rf, ok := ret.Get(0).(func(context.Context, Company) uint64); ok {
 		r0 = rf(ctx, params)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*uint64)
-		}
+		r0 = ret.Get(0).(uint64)
 	}
 
 	var r1 error
@@ -97,16 +95,14 @@ func (_m *MockCompaniesQueries) GetCompanyByID(ctx context.Context, compID uint6
 }
 
 // UpdateCompany provides a mock function with given fields: ctx, compID, data
-func (_m *MockCompaniesQueries) UpdateCompany(ctx context.Context, compID uint64, data Company) (*uint64, error) {
+func (_m *MockCompaniesQueries) UpdateCompany(ctx context.Context, compID uint64, data Company) (uint64, error) {
 	ret := _m.Called(ctx, compID, data)
 
-	var r0 *uint64
-	if rf, ok := ret.Get(0).(func(context.Context, uint64, Company) *uint64); ok {
+	var r0 uint64
+	if rf, ok := ret.Get(0).(func(context.Context, uint64, Company) uint64); ok {
 		r0 = rf(ctx, compID, data)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*uint64)
-		}
+		r0 = ret.Get(0).(uint64)
 	}
 
 	var r1 error

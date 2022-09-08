@@ -14,6 +14,7 @@ require (
 	github.com/jackc/pgx/v4 v4.17.2
 	github.com/joho/godotenv v1.4.0
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/pashagolub/pgxmock v1.8.0
 	github.com/segmentio/kafka-go v0.4.34
 	github.com/spf13/cobra v1.5.0
 	github.com/stretchr/testify v1.8.0

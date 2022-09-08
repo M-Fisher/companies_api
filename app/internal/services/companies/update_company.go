@@ -3,7 +3,6 @@ package companies
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/M-Fisher/companies_api/app/internal/models"
@@ -23,10 +22,8 @@ func (s *service) UpdateCompany(ctx context.Context, compID uint64, company mode
 			if err != nil {
 				return fmt.Errorf("failed to update company: %w", err)
 			}
-			if compID == nil {
-				return errors.New(`company not found`)
-			}
-			dbCompany, err := q.GetCompanyByID(ctx, *compID)
+
+			dbCompany, err := q.GetCompanyByID(ctx, compID)
 			if err != nil {
 				return fmt.Errorf("failed to get updated company: %w", err)
 			}
@@ -38,6 +35,7 @@ func (s *service) UpdateCompany(ctx context.Context, compID uint64, company mode
 
 			err = s.event.SendEvent(ctx, events.EventCompanyUpdated, resJSON)
 			if err != nil {
+				res = nil
 				return fmt.Errorf("failed to send company update event: %w", err)
 			}
 

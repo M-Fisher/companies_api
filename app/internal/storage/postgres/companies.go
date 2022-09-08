@@ -9,11 +9,11 @@ import (
 )
 
 type CompaniesQueries interface {
-	CreateCompany(ctx context.Context, params Company) (*uint64, error)
+	CreateCompany(ctx context.Context, params Company) (uint64, error)
 	DeleteCompany(ctx context.Context, compID uint64) error
 	GetCompanies(ctx context.Context, params Company) ([]*Company, error)
 	GetCompanyByID(ctx context.Context, compID uint64) (*Company, error)
-	UpdateCompany(ctx context.Context, compID uint64, data Company) (*uint64, error)
+	UpdateCompany(ctx context.Context, compID uint64, data Company) (uint64, error)
 }
 
 type Company struct {
@@ -28,7 +28,7 @@ type Company struct {
 func (q *Queries) CreateCompany(
 	ctx context.Context,
 	data Company,
-) (*uint64, error) {
+) (uint64, error) {
 	builder := q.builder.
 		Insert("companies").
 		SetMap(
@@ -44,15 +44,15 @@ func (q *Queries) CreateCompany(
 
 	query, args, err := builder.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("build query: %w", err)
+		return 0, fmt.Errorf("build query: %w", err)
 	}
 	var id uint64
 	err = q.tx.QueryRow(ctx, query, args...).Scan(&id)
 	if err != nil {
-		return nil, fmt.Errorf("query: %w", err)
+		return 0, fmt.Errorf("query: %w", err)
 	}
 
-	return &id, nil
+	return id, nil
 }
 
 func (q *Queries) GetCompanies(
@@ -108,7 +108,7 @@ func (q *Queries) UpdateCompany(
 	ctx context.Context,
 	compID uint64,
 	data Company,
-) (*uint64, error) {
+) (uint64, error) {
 	builder := q.builder.
 		Update("companies").
 		SetMap(
@@ -125,15 +125,15 @@ func (q *Queries) UpdateCompany(
 
 	query, args, err := builder.ToSql()
 	if err != nil {
-		return nil, fmt.Errorf("build query: %w", err)
+		return 0, fmt.Errorf("build query: %w", err)
 	}
 	var id uint64
 	err = q.tx.QueryRow(ctx, query, args...).Scan(&id)
 	if err != nil {
-		return nil, fmt.Errorf("query: %w", err)
+		return 0, fmt.Errorf("query: %w", err)
 	}
 
-	return &id, nil
+	return id, nil
 }
 
 func (q *Queries) GetCompanyByID(

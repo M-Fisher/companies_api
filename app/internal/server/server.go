@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -65,8 +66,11 @@ func (s *Server) Run() {
 
 func (s *Server) Stop() {
 	s.Log.Info("Stopping server")
-	s.Storage.Close()
-	err := s.EventsService.Stop()
+	err := s.Storage.Close(context.Background())
+	if err != nil {
+		s.Log.Error("Failed to stop DB service", zap.Error(err))
+	}
+	err = s.EventsService.Stop()
 	if err != nil {
 		s.Log.Error("Failed to stop events service", zap.Error(err))
 	}
