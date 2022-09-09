@@ -35,3 +35,8 @@ func (k *kafkaProducer) WriteMessage(ctx context.Context, eventName string, data
 	})
 	return err
 }
+
+func (k *kafkaProducer) GetStatus() error {
+	_, err := k.conn.Brokers()
+	return err
+}

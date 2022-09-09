@@ -10,11 +10,13 @@ import (
 
 type EventsService interface {
 	SendEvent(ctx context.Context, event EventName, data []byte) error
+	GetStatus() error
 	Stop() error
 }
 
 type Producer interface {
 	Close() error
+	GetStatus() error
 	WriteMessage(ctx context.Context, eventName string, data []byte) error
 }
 
@@ -33,4 +35,8 @@ func NewService(conf *config.Kafka, producerClient Producer, log *zap.Logger) *s
 func (s *service) Stop() error {
 	s.log.Info("Closing kafka connection")
 	return s.producer.Close()
+}
+
+func (s *service) GetStatus() error {
+	return s.producer.GetStatus()
 }

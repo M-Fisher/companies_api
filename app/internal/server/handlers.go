@@ -59,7 +59,16 @@ func (s *Server) createHealthChecker() func(rw http.ResponseWriter, r *http.Requ
 		}
 		ErrorsList := map[string]string{}
 		ServicesList := map[string]ServiceStatus{}
-		err := s.Storage.GetStatus()
+		err := s.EventsService.GetStatus()
+		if err != nil {
+			ErrorsList["Events"] = err.Error()
+		} else {
+			ServicesList["Events"] = ServiceStatus{
+				Status: `OK`,
+			}
+		}
+
+		err = s.Storage.GetStatus()
 		if err != nil {
 			ErrorsList["DB"] = err.Error()
 		} else {
