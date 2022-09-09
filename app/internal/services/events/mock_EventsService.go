@@ -13,6 +13,20 @@ type MockEventsService struct {
 	mock.Mock
 }
 
+// GetStatus provides a mock function with given fields:
+func (_m *MockEventsService) GetStatus() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // SendEvent provides a mock function with given fields: ctx, event, data
 func (_m *MockEventsService) SendEvent(ctx context.Context, event EventName, data []byte) error {
 	ret := _m.Called(ctx, event, data)
