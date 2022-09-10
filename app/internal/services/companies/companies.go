@@ -15,6 +15,7 @@ type CompaniesService interface {
 	CreateCompany(ctx context.Context, company models.Company) (uint64, error)
 	DeleteCompany(ctx context.Context, companyID uint64) error
 	GetCompanies(ctx context.Context, params models.Company) ([]*models.Company, error)
+	GetCompany(ctx context.Context, compID uint64) (*models.Company, error)
 	UpdateCompany(ctx context.Context, compID uint64, company models.Company) (*models.Company, error)
 }
 

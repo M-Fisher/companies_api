@@ -3,7 +3,6 @@ package base
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -45,19 +44,19 @@ func (a *API) VerifyUser(r *http.Request) (uint64, error) {
 	return 0, ErrUnauthorized
 }
 
-func (a *API) SetJSONHandler(path string, f func(ctx context.Context, rw http.ResponseWriter, r *http.Request) (interface{}, error)) *mux.Route {
+func (a *API) SetJSONHandler(path string, f func(rw http.ResponseWriter, r *http.Request) (interface{}, error)) *mux.Route {
 	if a.Router != nil {
 		return a.Router.HandleFunc(path,
 			a.loggingMiddleware(
 				a.panicHandlerMiddleware(
-					func(ctx context.Context, rw http.ResponseWriter, rq *http.Request) {
+					func(rw http.ResponseWriter, rq *http.Request) {
 						var (
 							res  any
 							err  error
 							done = make(chan struct{})
 						)
 						go func() {
-							res, err = f(ctx, rw, rq)
+							res, err = f(rw, rq)
 							done <- struct{}{}
 						}()
 						for {
@@ -96,9 +95,9 @@ func (a *API) SetJSONHandler(path string, f func(ctx context.Context, rw http.Re
 }
 
 func (a *API) panicHandlerMiddleware(
-	next func(ctx context.Context, rw http.ResponseWriter, rq *http.Request),
-) func(ctx context.Context, rw http.ResponseWriter, rq *http.Request) {
-	return func(ctx context.Context, rw http.ResponseWriter, rq *http.Request) {
+	next func(rw http.ResponseWriter, rq *http.Request),
+) func(rw http.ResponseWriter, rq *http.Request) {
+	return func(rw http.ResponseWriter, rq *http.Request) {
 		defer func() {
 			if r := recover(); r != nil {
 				s := debug.Stack()
@@ -106,12 +105,12 @@ func (a *API) panicHandlerMiddleware(
 				a.sendErrorResponse(rw, errors.New(`internal server error`))
 			}
 		}()
-		next(ctx, rw, rq)
+		next(rw, rq)
 	}
 }
 
 func (a *API) loggingMiddleware(
-	next func(ctx context.Context, rw http.ResponseWriter, rq *http.Request),
+	next func(rw http.ResponseWriter, rq *http.Request),
 ) func(rw http.ResponseWriter, rq *http.Request) {
 	return func(rw http.ResponseWriter, rq *http.Request) {
 		log := a.Srv.Log.
@@ -134,9 +133,9 @@ func (a *API) loggingMiddleware(
 			zap.String("remote_addr", remoteAddr),
 		)
 
-		ctx := logger.ToContext(rq.Context(), log)
+		rq = rq.WithContext(logger.ToContext(rq.Context(), log))
 
-		next(ctx, rw, rq)
+		next(rw, rq)
 	}
 }
 

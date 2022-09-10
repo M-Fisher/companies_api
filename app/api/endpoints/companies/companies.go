@@ -1,7 +1,6 @@
 package companies
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
@@ -21,13 +20,14 @@ type CompaniesAPI struct {
 // SetRoutes initial routing
 func (a *CompaniesAPI) SetRoutes() {
 	a.API.SetJSONHandler("", a.GetCompanies).Methods("GET")
+	a.API.SetJSONHandler("/{id}", a.GetCompany).Methods("GET")
 	a.API.SetJSONHandler("/{id}", a.UpdateCompany).Methods("PUT")
 	a.API.SetJSONHandler("/{id}", a.DeleteCompany).Methods("DELETE")
 	a.API.SetJSONHandler("", a.CreateCompany).Methods("POST")
 }
 
-func (a *CompaniesAPI) GetCompanies(ctx context.Context, rw http.ResponseWriter, r *http.Request) (any, error) {
-	log := logger.FromContext(ctx).With(zap.String("method", "GetCompanies"))
+func (a *CompaniesAPI) GetCompanies(rw http.ResponseWriter, r *http.Request) (any, error) {
+	log := logger.FromContext(r.Context()).With(zap.String("method", "GetCompanies"))
 	var data models.GetCompanyRequest
 	err := base.DecodeQuery(&data, r)
 	if err != nil {
@@ -35,7 +35,7 @@ func (a *CompaniesAPI) GetCompanies(ctx context.Context, rw http.ResponseWriter,
 		return base.Response{}, errors.New(`incorrect params`)
 	}
 
-	cmp, err := a.Srv.CompaniesService.GetCompanies(ctx, models.Company{
+	cmp, err := a.Srv.CompaniesService.GetCompanies(r.Context(), models.Company{
 		Name:    data.Name,
 		Code:    data.Code,
 		Country: data.Country,
@@ -53,8 +53,31 @@ func (a *CompaniesAPI) GetCompanies(ctx context.Context, rw http.ResponseWriter,
 	}, nil
 }
 
-func (a *CompaniesAPI) UpdateCompany(ctx context.Context, rw http.ResponseWriter, r *http.Request) (any, error) {
-	log := logger.FromContext(ctx).With(zap.String("method", "UpdateCompany"))
+func (a *CompaniesAPI) GetCompany(rw http.ResponseWriter, r *http.Request) (any, error) {
+	log := logger.FromContext(r.Context()).With(zap.String("method", "GetCompanies"))
+	compID, err := base.GetVarInt(r, `id`)
+	if err != nil {
+		log.Error("Failed to parse company id from request url", zap.Error(err))
+		return base.Response{}, errors.New(`company id required`)
+	}
+
+	cmp, err := a.Srv.CompaniesService.GetCompany(r.Context(), uint64(compID))
+	if err != nil {
+		log.Error("Failed to get company", zap.Error(err))
+		return base.Response{
+			"err": err.Error(),
+		}, errors.New(`global error`)
+	}
+	if cmp == nil {
+		return nil, ErrCompanyNotFound
+	}
+	return base.Response{
+		"company": cmp,
+	}, nil
+}
+
+func (a *CompaniesAPI) UpdateCompany(rw http.ResponseWriter, r *http.Request) (any, error) {
+	log := logger.FromContext(r.Context()).With(zap.String("method", "UpdateCompany"))
 	compID, err := base.GetVarInt(r, `id`)
 	if err != nil {
 		log.Error("Failed to parse company id from request url", zap.Error(err))
@@ -68,7 +91,7 @@ func (a *CompaniesAPI) UpdateCompany(ctx context.Context, rw http.ResponseWriter
 		return base.Response{}, errors.New(`incorrect params`)
 	}
 
-	newComp, err := a.Srv.CompaniesService.UpdateCompany(ctx, uint64(compID), data)
+	newComp, err := a.Srv.CompaniesService.UpdateCompany(r.Context(), uint64(compID), data)
 	if err != nil {
 		log.Error("Failed to update company", zap.Error(err))
 		return base.Response{
@@ -80,8 +103,8 @@ func (a *CompaniesAPI) UpdateCompany(ctx context.Context, rw http.ResponseWriter
 	}, nil
 }
 
-func (a *CompaniesAPI) DeleteCompany(ctx context.Context, rw http.ResponseWriter, r *http.Request) (any, error) {
-	log := logger.FromContext(ctx).With(zap.String("method", "DeleteCompany"))
+func (a *CompaniesAPI) DeleteCompany(rw http.ResponseWriter, r *http.Request) (any, error) {
+	log := logger.FromContext(r.Context()).With(zap.String("method", "DeleteCompany"))
 	_, err := a.VerifyUser(r)
 	if err != nil {
 		log.Error("Failed to verify user")
@@ -102,7 +125,7 @@ func (a *CompaniesAPI) DeleteCompany(ctx context.Context, rw http.ResponseWriter
 		return base.Response{}, errors.New(`company id required`)
 	}
 
-	err = a.Srv.CompaniesService.DeleteCompany(ctx, uint64(compID))
+	err = a.Srv.CompaniesService.DeleteCompany(r.Context(), uint64(compID))
 	if err != nil {
 		log.Error("Failed to delete company", zap.Error(err))
 		return base.Response{
@@ -112,8 +135,8 @@ func (a *CompaniesAPI) DeleteCompany(ctx context.Context, rw http.ResponseWriter
 	return base.Response{}, nil
 }
 
-func (a *CompaniesAPI) CreateCompany(ctx context.Context, rw http.ResponseWriter, r *http.Request) (any, error) {
-	log := logger.FromContext(ctx).With(zap.String("method", "CreateCompany"))
+func (a *CompaniesAPI) CreateCompany(rw http.ResponseWriter, r *http.Request) (any, error) {
+	log := logger.FromContext(r.Context()).With(zap.String("method", "CreateCompany"))
 	_, err := a.VerifyUser(r)
 	if err != nil {
 		log.Error("Failed to verify user", zap.Error(err))
@@ -134,7 +157,7 @@ func (a *CompaniesAPI) CreateCompany(ctx context.Context, rw http.ResponseWriter
 		return base.Response{}, errors.New(`incorrect params`)
 	}
 
-	compID, err := a.Srv.CompaniesService.CreateCompany(ctx, userData)
+	compID, err := a.Srv.CompaniesService.CreateCompany(r.Context(), userData)
 	if err != nil {
 		log.Error("Failed to create company", zap.Error(err))
 		return base.Response{

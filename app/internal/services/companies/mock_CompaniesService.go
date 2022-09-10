@@ -72,6 +72,29 @@ func (_m *MockCompaniesService) GetCompanies(ctx context.Context, params models.
 	return r0, r1
 }
 
+// GetCompany provides a mock function with given fields: ctx, compID
+func (_m *MockCompaniesService) GetCompany(ctx context.Context, compID uint64) (*models.Company, error) {
+	ret := _m.Called(ctx, compID)
+
+	var r0 *models.Company
+	if rf, ok := ret.Get(0).(func(context.Context, uint64) *models.Company); ok {
+		r0 = rf(ctx, compID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Company)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, uint64) error); ok {
+		r1 = rf(ctx, compID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // UpdateCompany provides a mock function with given fields: ctx, compID, company
 func (_m *MockCompaniesService) UpdateCompany(ctx context.Context, compID uint64, company models.Company) (*models.Company, error) {
 	ret := _m.Called(ctx, compID, company)

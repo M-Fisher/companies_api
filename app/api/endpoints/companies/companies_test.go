@@ -1,7 +1,6 @@
 package companies
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -50,7 +49,7 @@ func (suite *CompaniesTestsSuite) TestGetCompaniesEmptyResponse() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.GetCompanies(context.Background(), res, req)
+	resp, gotErr := a.GetCompanies(res, req)
 
 	suite.Equal(expResp, resp)
 	suite.NoError(gotErr)
@@ -77,7 +76,7 @@ func (suite *CompaniesTestsSuite) TestGetCompaniesInternalError() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.GetCompanies(context.Background(), res, req)
+	resp, gotErr := a.GetCompanies(res, req)
 
 	suite.Equal(expResp, resp)
 	suite.Error(gotErr)
@@ -116,7 +115,126 @@ func (suite *CompaniesTestsSuite) TestGetCompaniesOk() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.GetCompanies(context.Background(), res, req)
+	resp, gotErr := a.GetCompanies(res, req)
+
+	suite.Equal(expResp, resp)
+	suite.NoError(gotErr)
+}
+
+func (suite *CompaniesTestsSuite) TestGetCompanyEmptyResponse() {
+	req, err := http.NewRequest("GET", "api/companies/1", nil)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	req = mux.SetURLVars(req, map[string]string{
+		"id": "1",
+	})
+	compmocks := new(companies.MockCompaniesService)
+	compmocks.On("GetCompany", mock.Anything, uint64(1)).Return(nil, nil)
+	srv := server.Server{
+		Log:              zap.NewExample(),
+		CompaniesService: compmocks,
+	}
+
+	a := CompaniesAPI{
+		API: base.API{
+			Srv: &srv,
+		},
+	}
+	res := httptest.NewRecorder()
+	resp, gotErr := a.GetCompany(res, req)
+
+	suite.Equal(nil, resp)
+	suite.Equal(ErrCompanyNotFound, gotErr)
+}
+
+func (suite *CompaniesTestsSuite) TestGetCompanyInternalError() {
+	expResp := base.Response{
+		"err": `some error`,
+	}
+	req, err := http.NewRequest("GET", "api/companies/1", nil)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	req = mux.SetURLVars(req, map[string]string{
+		"id": "1",
+	})
+	compmocks := new(companies.MockCompaniesService)
+	compmocks.On("GetCompany", mock.Anything, uint64(1)).Return(nil, errors.New("some error"))
+	srv := server.Server{
+		Log:              zap.NewExample(),
+		CompaniesService: compmocks,
+	}
+
+	a := CompaniesAPI{
+		API: base.API{
+			Srv: &srv,
+		},
+	}
+	res := httptest.NewRecorder()
+	resp, gotErr := a.GetCompany(res, req)
+
+	suite.Equal(expResp, resp)
+	suite.Error(gotErr)
+}
+
+func (suite *CompaniesTestsSuite) TestGetCompanyEmptyID() {
+	req, err := http.NewRequest("GET", "api/companies/q", nil)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	srv := server.Server{
+		Log: zap.NewExample(),
+	}
+
+	a := CompaniesAPI{
+		API: base.API{
+			Srv: &srv,
+		},
+	}
+	res := httptest.NewRecorder()
+	resp, gotErr := a.GetCompany(res, req)
+	suite.Equal(base.Response{}, resp)
+	suite.Equal(errors.New(`company id required`), gotErr)
+}
+
+func (suite *CompaniesTestsSuite) TestGetCompanyOk() {
+	expResp := base.Response{
+		"company": &models.Company{
+			ID:    1,
+			Name:  "test",
+			Code:  "TST",
+			Phone: "1234",
+		},
+	}
+	req, err := http.NewRequest("GET", "api/companies/1", nil)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	req = mux.SetURLVars(req, map[string]string{
+		"id": "1",
+	})
+
+	compmocks := new(companies.MockCompaniesService)
+	compmocks.On("GetCompany", mock.Anything, uint64(1)).Return(&models.Company{
+		ID:    1,
+		Name:  "test",
+		Code:  "TST",
+		Phone: "1234",
+	}, nil)
+	srv := server.Server{
+		Log:              zap.NewExample(),
+		CompaniesService: compmocks,
+	}
+
+	a := CompaniesAPI{
+		API: base.API{
+			Srv: &srv,
+		},
+	}
+	res := httptest.NewRecorder()
+	resp, gotErr := a.GetCompany(res, req)
 
 	suite.Equal(expResp, resp)
 	suite.NoError(gotErr)
@@ -141,7 +259,7 @@ func (suite *CompaniesTestsSuite) TestCreateCompanyUnauthorized() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.CreateCompany(context.Background(), res, req)
+	resp, gotErr := a.CreateCompany(res, req)
 
 	suite.Nil(resp)
 	suite.Equal(errors.New(`not authorized`), gotErr)
@@ -175,7 +293,7 @@ func (suite *CompaniesTestsSuite) TestCreateCompanyInvalidIP() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.CreateCompany(context.Background(), res, req)
+	resp, gotErr := a.CreateCompany(res, req)
 
 	suite.Nil(resp)
 	suite.Equal(errors.New(`not authorized`), gotErr)
@@ -209,7 +327,7 @@ func (suite *CompaniesTestsSuite) TestCreateCompanyRegionCheckingFailed() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.CreateCompany(context.Background(), res, req)
+	resp, gotErr := a.CreateCompany(res, req)
 
 	suite.Nil(resp)
 	suite.Equal(errors.New(`not authorized`), gotErr)
@@ -246,7 +364,7 @@ func (suite *CompaniesTestsSuite) TestCreateCompanyInternalError() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.CreateCompany(context.Background(), res, req)
+	resp, gotErr := a.CreateCompany(res, req)
 
 	suite.Equal(expResp, resp)
 	suite.Equal(errors.New("server error"), gotErr)
@@ -277,7 +395,7 @@ func (suite *CompaniesTestsSuite) TestCreateCompanyParamsError() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.CreateCompany(context.Background(), res, req)
+	resp, gotErr := a.CreateCompany(res, req)
 
 	suite.Equal(base.Response{}, resp)
 	suite.Equal(errors.New("incorrect params"), gotErr)
@@ -314,7 +432,7 @@ func (suite *CompaniesTestsSuite) TestCreateCompanyOk() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.CreateCompany(context.Background(), res, req)
+	resp, gotErr := a.CreateCompany(res, req)
 
 	suite.Equal(expResp, resp)
 	suite.NoError(gotErr)
@@ -339,7 +457,7 @@ func (suite *CompaniesTestsSuite) TestDeleteCompanyUnauthorized() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.DeleteCompany(context.Background(), res, req)
+	resp, gotErr := a.DeleteCompany(res, req)
 	suite.Nil(resp)
 	suite.Equal(errors.New(`not authorized`), gotErr)
 }
@@ -372,7 +490,7 @@ func (suite *CompaniesTestsSuite) TestDeleteCompanyInvalidIP() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.DeleteCompany(context.Background(), res, req)
+	resp, gotErr := a.DeleteCompany(res, req)
 	suite.Nil(resp)
 	suite.Equal(errors.New(`not authorized`), gotErr)
 }
@@ -405,7 +523,7 @@ func (suite *CompaniesTestsSuite) TestDeleteCompanyRegionCheckingFailed() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.DeleteCompany(context.Background(), res, req)
+	resp, gotErr := a.DeleteCompany(res, req)
 	suite.Nil(resp)
 	suite.Equal(errors.New(`not authorized`), gotErr)
 }
@@ -438,7 +556,7 @@ func (suite *CompaniesTestsSuite) TestDeleteCompanyEmptyID() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.DeleteCompany(context.Background(), res, req)
+	resp, gotErr := a.DeleteCompany(res, req)
 	suite.Equal(base.Response{}, resp)
 	suite.Equal(errors.New(`company id required`), gotErr)
 }
@@ -479,7 +597,7 @@ func (suite *CompaniesTestsSuite) TestDeleteCompanyInternalError() {
 
 	res := httptest.NewRecorder()
 
-	resp, gotErr := a.DeleteCompany(context.Background(), res, req)
+	resp, gotErr := a.DeleteCompany(res, req)
 
 	suite.Equal(expResp, resp)
 	suite.Equal(errors.New(`some error`), gotErr)
@@ -519,7 +637,7 @@ func (suite *CompaniesTestsSuite) TestDeleteCompanyOk() {
 
 	res := httptest.NewRecorder()
 
-	resp, gotErr := a.DeleteCompany(context.Background(), res, req)
+	resp, gotErr := a.DeleteCompany(res, req)
 
 	suite.Equal(base.Response{}, resp)
 	suite.NoError(gotErr)
@@ -554,7 +672,7 @@ func (suite *CompaniesTestsSuite) TestUpdateCompanyIncorrectParams() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.UpdateCompany(context.Background(), res, req)
+	resp, gotErr := a.UpdateCompany(res, req)
 
 	suite.Equal(base.Response{}, resp)
 	suite.Equal(errors.New("company id required"), gotErr)
@@ -600,7 +718,7 @@ func (suite *CompaniesTestsSuite) TestUpdateCompanyInternalError() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.UpdateCompany(context.Background(), res, req)
+	resp, gotErr := a.UpdateCompany(res, req)
 
 	suite.Equal(expResp, resp)
 	suite.Equal(errors.New("some error"), gotErr)
@@ -634,7 +752,7 @@ func (suite *CompaniesTestsSuite) TestUpdateCompanyParamsError() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.UpdateCompany(context.Background(), res, req)
+	resp, gotErr := a.UpdateCompany(res, req)
 
 	suite.Equal(base.Response{}, resp)
 	suite.Equal(errors.New("incorrect params"), gotErr)
@@ -681,7 +799,7 @@ func (suite *CompaniesTestsSuite) TestUpdateCompanyOk() {
 		},
 	}
 	res := httptest.NewRecorder()
-	resp, gotErr := a.UpdateCompany(context.Background(), res, req)
+	resp, gotErr := a.UpdateCompany(res, req)
 
 	suite.Equal(expResp, resp)
 	suite.NoError(gotErr)
